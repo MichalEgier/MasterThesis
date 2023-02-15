@@ -1,3 +1,4 @@
 # ignored files
 
 **/.idea/*
+**/__pycache__/**
