@@ -9,9 +9,12 @@ from qiskit.tools.monitor import job_monitor
 from qiskit import Aer
 
 from Codes.SteaneCode.encoding import add_encoding_subcircuit
+from Common.error_subcircuits import add_simple_error_subcircuit
 from Codes.SteaneCode.syndrome_measurement import add_syndrome_measurement_6_ancilla_subcircuit
 from Codes.SteaneCode.correction import add_correction_subcircuit
 from Codes.SteaneCode.decoding import add_decoding_subcircuit
+
+from Common.utils import construct_circuit
 
 import matplotlib.pyplot as plt
 
@@ -34,18 +37,14 @@ fin_m = ClassicalRegister(1,'final_measurement') #1 for final measurement after 
 
 circuit = QuantumCircuit(q_logical, ancilla, x_syndrome, z_syndrome, fin_m)
 
-#q[0] is the state to encode
+#q_logical[0] is the state to encode
 
+'''
 add_encoding_subcircuit(circuit, q_logical)
 circuit.barrier()
-
-####error here############
-circuit.x(q_logical[6])#Bit flip error
-circuit.z(q_logical[6])#Phase flip error
-############################
-
+add_simple_error_subcircuit(circuit, q_logical, 6)
 circuit.barrier()
-add_syndrome_measurement_6_ancilla_subcircuit(circuit, q_logical, ancilla)
+add_syndrome_measurement_6_ancilla_subcircuit(circuit, q_logical, ancilla, x_syndrome, z_syndrome)
 circuit.barrier()
 add_correction_subcircuit(circuit, q_logical, x_syndrome, z_syndrome)
 circuit.barrier()
@@ -55,6 +54,16 @@ add_decoding_subcircuit(circuit, q_logical)
 
 circuit.barrier()
 circuit.measure(q_logical[0], fin_m)
+
+'''
+
+construct_circuit(circuit, [
+    lambda: add_encoding_subcircuit(circuit, q_logical),
+    lambda: add_simple_error_subcircuit(circuit, q_logical, 6),
+    lambda: add_syndrome_measurement_6_ancilla_subcircuit(circuit, q_logical, ancilla, x_syndrome, z_syndrome),
+    lambda: add_correction_subcircuit(circuit, q_logical, x_syndrome, z_syndrome),
+    lambda: add_decoding_subcircuit(circuit, q_logical)
+])
 
 circuit.draw(output='mpl', filename='../Circuits/steane_code_6_ancilla.png') #Draws an image of the circuit
 

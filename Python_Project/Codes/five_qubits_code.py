@@ -1,7 +1,11 @@
+from Codes.FiveQubitCode.correction import add_correction_subcircuit
+from Codes.FiveQubitCode.decoding import add_decoding_subcircuit
+from Codes.FiveQubitCode.encoding import add_encoding_subcircuit
+from Codes.FiveQubitCode.syndrome_measurement import add_syndrome_measurement_4_ancilla_subcircuit
 from Common.error_subcircuits import add_simple_error_subcircuit
 from Common.utils import construct_circuit
 
-print('\nSteane Code 3 ancilla')
+print('\n5 Qubits code')
 print('--------------')
 
 from qiskit import QuantumRegister
@@ -10,10 +14,6 @@ from qiskit import QuantumCircuit, execute,IBMQ
 from qiskit.tools.monitor import job_monitor
 from qiskit import Aer
 
-from Codes.SteaneCode.encoding import add_encoding_subcircuit
-from Codes.SteaneCode.syndrome_measurement import add_syndrome_measurement_3_ancilla_reset_subcircuit
-from Codes.SteaneCode.correction import add_correction_subcircuit
-from Codes.SteaneCode.decoding import add_decoding_subcircuit
 
 import matplotlib.pyplot as plt
 
@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 #
 #   In Place                            No
 #   Mid-circuit measurement             Yes
-#   Ancilla                             3
+#   Ancilla                             4
 # ========================================================
 
 
@@ -36,19 +36,18 @@ backend = Aer.get_backend("aer_simulator")
 
 #q_logical[0] is the state to encode
 
-q_logical = QuantumRegister(7, 'logical')
-ancilla = QuantumRegister(3, 'ancilla')
-x_syndrome = ClassicalRegister(3, 'x_syndrome')
-z_syndrome = ClassicalRegister(3, 'z_syndrome')
-fin_m = ClassicalRegister(1,'final_measurement') #1 for final measurement after decoding, 6 ancilla for decoding (syndrome measurement)
+q_logical = QuantumRegister(5, 'logical')
+ancilla = QuantumRegister(4, 'ancilla')
+syndrome = ClassicalRegister(4, 'syndrome')
+fin_m = ClassicalRegister(1,'final_measurement')
 
-circuit = QuantumCircuit(q_logical, ancilla, x_syndrome, z_syndrome, fin_m)
+circuit = QuantumCircuit(q_logical, ancilla, syndrome, fin_m)
 
 construct_circuit(circuit, [
     lambda: add_encoding_subcircuit(circuit, q_logical),
-    lambda: add_simple_error_subcircuit(circuit, q_logical, 0),
-    lambda: add_syndrome_measurement_3_ancilla_reset_subcircuit(circuit, q_logical, ancilla, x_syndrome, z_syndrome),
-    lambda: add_correction_subcircuit(circuit, q_logical, x_syndrome, z_syndrome),
+    lambda: add_simple_error_subcircuit(circuit, q_logical, 4),
+    lambda: add_syndrome_measurement_4_ancilla_subcircuit(circuit, q_logical, ancilla, syndrome),
+    lambda: add_correction_subcircuit(circuit, q_logical, syndrome),
     lambda: add_decoding_subcircuit(circuit, q_logical)
     ])
 
@@ -57,7 +56,7 @@ construct_circuit(circuit, [
 circuit.barrier()
 circuit.measure(q_logical[0], fin_m)
 
-circuit.draw(output='mpl', filename='../Circuits/steane_code_3_ancilla_reset.png') #Draws an image of the circuit
+circuit.draw(output='mpl', filename='../Circuits/5_qubits_code.png') #Draws an image of the circuit
 
 job = execute(circuit, backend, shots=1000)
 
