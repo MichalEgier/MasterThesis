@@ -24,8 +24,8 @@ circuit = QuantumCircuit(q,c)
 circuit.h(q[0])
 
 ####error here############
-circuit.x(q[0])#Bit flip error
-circuit.z(q[0])#Phase flip error
+#circuit.x(q[0])#Bit flip error
+#circuit.z(q[0])#Phase flip error
 ############################
 
 circuit.h(q[0])
@@ -47,12 +47,12 @@ print(counts)
 #####Steane code starts here ########
 q = QuantumRegister(7+6,'q') #7 for encoding, 6 ancilla for decoding
 #q = QuantumRegister(7,'q') #7 for encoding, 6 ancilla for decoding
-c = ClassicalRegister(1+6,'c') #1 for final measurement after decoding, 6 ancilla for decoding (syndrome measurement)
-#x_syndrome = ClassicalRegister(3, 'x_syndrome')
-#y_syndrome = ClassicalRegister(3, 'y_syndrome')
-#fin_m = ClassicalRegister(1+6,'final_measurement') #1 for final measurement after decoding, 6 ancilla for decoding (syndrome measurement)
+#c = ClassicalRegister(1+6,'c') #1 for final measurement after decoding, 6 ancilla for decoding (syndrome measurement)
+x_syndrome = ClassicalRegister(3, 'x_syndrome')
+z_syndrome = ClassicalRegister(3, 'z_syndrome')
+fin_m = ClassicalRegister(1,'final_measurement') #1 for final measurement after decoding, 6 ancilla for decoding (syndrome measurement)
 
-circuit = QuantumCircuit(q,c)
+circuit = QuantumCircuit(q, x_syndrome, z_syndrome, fin_m)
 
 #q[0] is the state to encode
 
@@ -78,8 +78,8 @@ circuit.cx(q[4],q[3])
 circuit.barrier(q)
 
 ####error here############
-#circuit.x(q[0])#Bit flip error
-#circuit.z(q[0])#Phase flip error
+circuit.x(q[6])#Bit flip error
+circuit.z(q[6])#Phase flip error
 ############################
 
 circuit.barrier(q)
@@ -124,35 +124,60 @@ circuit.h(q[10])
 circuit.h(q[11])
 circuit.h(q[12])
 
-circuit.measure(range(7,10), range(1,4)) #first 3 ancilla qubits (for bit-error measurement) to classical bits mapping (measurement)
-circuit.measure(range(10,13), range(4,7)) #last 3 ancilla qubits (for phase-error measurement) to classical bits mapping (measurement)
+circuit.measure(range(7,10), range(0,3)) #first 3 ancilla qubits (for bit-error measurement) to classical bits mapping (measurement)
+circuit.measure(range(10,13), range(3,6)) #next 3 ancilla qubits (for phase-error measurement) to classical bits mapping (measurement)
 
 circuit.barrier(q)
 
 # correction here
 
+for i in range(1, 8):
+    circuit.x(q[i - 1]).c_if(x_syndrome, i)
 
-circuit.cx().c_if()
+# Apply the corrective Z gates
+for i in range(1, 8):
+    circuit.z(q[i - 1]).c_if(z_syndrome, i)
 
-##
+# decoding here
+
+# firstly - simple decoding with reversal of encoding
+
+circuit.cx(q[4],q[3])
+circuit.cx(q[4],q[2])
+circuit.cx(q[4],q[1])
+
+circuit.cx(q[5],q[3])
+circuit.cx(q[5],q[2])
+circuit.cx(q[5],q[0])
+
+circuit.cx(q[6],q[3])
+circuit.cx(q[6],q[1])
+circuit.cx(q[6],q[0])
+
+circuit.cx(q[0],q[2])
+circuit.cx(q[0],q[1])
+
+circuit.h(q[6])
+circuit.h(q[5])
+circuit.h(q[4])
 
 #here final measurement
 
 circuit.barrier(q)
 
-#circuit.measure(q[0],c[0])
+circuit.measure(q[0],fin_m)
 
 circuit.draw(output='mpl', filename='../Circuits/steane_code_6_ancilla.png') #Draws an image of the circuit
 
-#job = execute(circuit, backend, shots=1000)
+job = execute(circuit, backend, shots=1000)
 
-#job_monitor(job)
+job_monitor(job)
 
-#counts = job.result().get_counts()
+counts = job.result().get_counts()
 
-#print("\nSteane code with bit flip and phase error")
-#print("----------------------------------------")
-#print(counts)
+print("\nSteane code with bit flip and phase error")
+print("----------------------------------------")
+print(counts)
 #input()
 
 from qiskit.visualization import array_to_latex
