@@ -65,7 +65,14 @@ construct_circuit(circuit, [
     lambda: add_decoding_subcircuit(circuit, q_logical)
 ])
 
+#here final measurement
+
+circuit.barrier()
+circuit.measure(q_logical[0], fin_m)
+
 circuit.draw(output='mpl', filename='../Circuits/steane_code_6_ancilla.png') #Draws an image of the circuit
+
+print(dict(circuit.count_ops()))
 
 job = execute(circuit, backend, shots=1000)
 

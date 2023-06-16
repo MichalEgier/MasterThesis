@@ -2,6 +2,8 @@ from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 
 def add_syndrome_measurement_4_ancilla_subcircuit(circuit: QuantumCircuit, logical: QuantumRegister, ancilla: QuantumRegister, syndrome: ClassicalRegister) -> None:
 
+    circuit.reset(ancilla[0:4])
+
     circuit.h(ancilla[0])
     circuit.h(ancilla[1])
     circuit.h(ancilla[2])

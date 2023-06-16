@@ -59,6 +59,8 @@ circuit.measure(q_logical[0], fin_m)
 
 circuit.draw(output='mpl', filename='../Circuits/steane_code_3_ancilla_reset.png') #Draws an image of the circuit
 
+print(dict(circuit.count_ops()))
+
 job = execute(circuit, backend, shots=1000)
 
 job_monitor(job)

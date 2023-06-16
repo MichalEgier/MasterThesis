@@ -40,6 +40,8 @@ circuit.measure(q[0],c[0])
 
 circuit.draw(output='mpl', filename='../Circuits/bit_flip_code_in_place.png') #Draws an image of the circuit
 
+print(dict(circuit.count_ops()))
+
 job = execute(circuit, backend, shots=1000)
 
 job_monitor(job)

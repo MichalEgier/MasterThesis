@@ -46,7 +46,9 @@ circuit.ccx(q[1],q[2],q[0])
 
 circuit.measure(q[0],c[0])
 
-circuit.draw(output='mpl',filename='sign_flip_code_in_place.png') #Draws an image of the circuit
+circuit.draw(output='mpl',filename='../Circuits/sign_flip_code_in_place.png') #Draws an image of the circuit
+
+print(dict(circuit.count_ops()))
 
 job = execute(circuit, backend, shots=1000)
 
