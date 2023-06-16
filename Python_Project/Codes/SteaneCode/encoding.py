@@ -19,3 +19,8 @@ def add_encoding_subcircuit(circuit: QuantumCircuit, logical: QuantumRegister) -
     circuit.cx(logical[4],logical[1])
     circuit.cx(logical[4],logical[2])
     circuit.cx(logical[4],logical[3])
+
+
+
+def add_encoding_fault_tolerant_with_flag_qubit_subcircuit(circuit: QuantumCircuit, logical: QuantumRegister) -> None:
+    '''Source: https://doi.org/10.3390/e24081107 '''

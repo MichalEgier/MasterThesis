@@ -6,6 +6,8 @@ from qiskit import ClassicalRegister
 from qiskit import QuantumCircuit, execute,IBMQ
 from qiskit.tools.monitor import job_monitor
 from qiskit import Aer
+from qiskit import transpile
+from Common.utils import get_simulator_backend
 
 #IBMQ.enable_account(‘ENTER API KEY HERE')
 #provider = IBMQ.get_provider(hub='ibm-q')
@@ -50,6 +52,7 @@ circuit.draw(output='mpl',filename='../Circuits/sign_flip_code_in_place.png') #D
 
 print(dict(circuit.count_ops()))
 
+circuit = transpile(circuit, backend, optimization_level=3)
 job = execute(circuit, backend, shots=1000)
 
 job_monitor(job)

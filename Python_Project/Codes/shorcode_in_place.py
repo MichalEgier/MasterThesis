@@ -6,13 +6,17 @@ from qiskit import ClassicalRegister
 from qiskit import QuantumCircuit, execute,IBMQ
 from qiskit.tools.monitor import job_monitor
 from qiskit import Aer
+from qiskit import transpile
+from Common.utils import get_simulator_backend
+from Common.delay_subcircuits import add_delay_to_subcircuit
 
 #IBMQ.enable_account(‘ENTER API KEY HERE')
 #provider = IBMQ.get_provider(hub='ibm-q')
 
 #backend = provider.get_backend('ibmq_qasm_simulator')
 
-backend = Aer.get_backend("aer_simulator")
+#backend = Aer.get_backend("aer_simulator")
+backend = get_simulator_backend()
 
 q = QuantumRegister(1,'q')
 c = ClassicalRegister(1,'c')
@@ -22,9 +26,11 @@ circuit = QuantumCircuit(q,c)
 circuit.h(q[0])
 
 ####error here############
-circuit.x(q[0])#Bit flip error
-circuit.z(q[0])#Phase flip error
+#circuit.x(q[0])#Bit flip error
+#circuit.z(q[0])#Phase flip error
 ############################
+
+add_delay_to_subcircuit(circuit, q)
 
 circuit.h(q[0])
 
@@ -32,7 +38,7 @@ circuit.barrier(q)  #co to robi?
 
 circuit.measure(q[0],c[0])
 
-job = execute(circuit, backend, shots=1000)
+job = execute(circuit, backend, shots=10000)
 
 job_monitor(job)
 
@@ -68,9 +74,11 @@ circuit.cx(q[6],q[8])
 circuit.barrier(q)
 
 ####error here############
-circuit.x(q[0])#Bit flip error
-circuit.z(q[0])#Phase flip error
+#circuit.x(q[0])#Bit flip error
+#circuit.z(q[0])#Phase flip error
 ############################
+
+add_delay_to_subcircuit(circuit, q)
 
 circuit.barrier(q)
 
@@ -104,7 +112,8 @@ circuit.draw(output='mpl',filename='../Circuits/shorcode_in_place.png') #Draws a
 
 print(dict(circuit.count_ops()))
 
-job = execute(circuit, backend, shots=1000)
+circuit = transpile(circuit, backend, optimization_level=3)
+job = execute(circuit, backend, shots=10000)
 
 job_monitor(job)
 
