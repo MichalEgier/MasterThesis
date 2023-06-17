@@ -2,9 +2,9 @@ from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 from qiskit import QuantumCircuit, execute,IBMQ
 from qiskit.tools.monitor import job_monitor
 from Common.delay_subcircuits import add_delay_to_subcircuit
-from Common.error_subcircuits import add_simple_error_subcircuit
+from Common.error_subcircuits import add_simple_error_subcircuit, add_bit_phase_error_channel_subcircuit
 
-def run_code(backend, delay_ns: int = 0, artifical_error = False, shots = 100_000):
+def run_code(backend, delay_ns: int = 0, artifical_certain_error = False, shots = 100_000, artifical_probabilistic_error_rate = 0):
     q = QuantumRegister(1, 'q')
     c = ClassicalRegister(1,'c')
 
@@ -12,10 +12,13 @@ def run_code(backend, delay_ns: int = 0, artifical_error = False, shots = 100_00
 
     circuit.h(q[0])
 
-    if(artifical_error):
+    if(artifical_certain_error):
         add_simple_error_subcircuit(circuit, q, 0)
     if(delay_ns > 0):
         add_delay_to_subcircuit(circuit, q, delay_ns)
+    if(artifical_probabilistic_error_rate > 0):
+        add_bit_phase_error_channel_subcircuit(circuit, q, artifical_probabilistic_error_rate)
+
 
     circuit.h(q[0])
 
@@ -31,6 +34,6 @@ def run_code(backend, delay_ns: int = 0, artifical_error = False, shots = 100_00
 
     print("\n No code at all results:")
     print("--------------------------------------")
-    print("Delay = ", delay_ns, "ns")
+    print("Delay = ", delay_ns, "ns", "Artifical error rate = ", artifical_probabilistic_error_rate)
     print(counts)
 

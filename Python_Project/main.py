@@ -1,5 +1,5 @@
 
-from Common.utils import get_real_device_simulator_backend, get_perfect_gates_simulator_backend
+from Common.utils import get_real_device_simulator_backend, get_perfect_gates_simulator_backend, get_identity_noise_model
 from Codes import bit_flip_code_in_place, five_qubits_code, shorcode_in_place, sign_flip_code_in_place, steane_code_3_ancilla_reset, steane_code_6_ancilla
 from Common import uncorrected_circuit
 
@@ -33,15 +33,17 @@ def run_perfect_gates_simulator_experiments():
     '''Although gates are simulated to be perfect, noise from environment is still present in these experiments.'''
     backend = get_perfect_gates_simulator_backend()
     shots = 100_000
-    delay_times = [0, 1000, 5000, 10000, 15000]
-    for t in delay_times:
-        bit_flip_code_in_place.run_code(backend, delay_ns=t, shots=shots)
-        five_qubits_code.run_code(backend, delay_ns=t, shots=shots)
-        shorcode_in_place.run_code(backend, delay_ns=t, shots=shots)
-        sign_flip_code_in_place.run_code(backend, delay_ns=t, shots=shots)
-        steane_code_3_ancilla_reset.run_code(backend, delay_ns=t, shots=shots)
-        steane_code_6_ancilla.run_code(backend, delay_ns=t, shots=shots)
-        uncorrected_circuit.run_code(backend, delay_ns=t, shots=shots)
+    error_rates = [0.001, 0.005, 0.01, 0.015, 0.05, 0.1]
+    #error_rates = [0.001, 0.0001]
+    for rate in error_rates:
+        noise_model = get_identity_noise_model(rate)
+        bit_flip_code_in_place.run_code(backend, shots=shots, artifical_probabilistic_error_rate=rate)
+        five_qubits_code.run_code(backend, shots=shots, artifical_probabilistic_error_rate=rate )
+        shorcode_in_place.run_code(backend, shots=shots, artifical_probabilistic_error_rate=rate )
+        sign_flip_code_in_place.run_code(backend, shots=shots, artifical_probabilistic_error_rate=rate )
+        steane_code_3_ancilla_reset.run_code(backend, shots=shots, artifical_probabilistic_error_rate=rate )
+        steane_code_6_ancilla.run_code(backend, shots=shots, artifical_probabilistic_error_rate=rate )
+        uncorrected_circuit.run_code(backend, shots=shots, artifical_probabilistic_error_rate=rate)
 
 
 #run_real_device_simulator_experiments()

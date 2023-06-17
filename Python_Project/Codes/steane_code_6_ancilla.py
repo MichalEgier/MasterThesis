@@ -7,18 +7,18 @@ from qiskit import Aer
 from qiskit import transpile
 
 from Codes.SteaneCode.encoding import add_encoding_subcircuit
-from Common.error_subcircuits import add_simple_error_subcircuit
+from Common.error_subcircuits import add_simple_error_subcircuit, add_bit_phase_error_channel_subcircuit
 from Codes.SteaneCode.syndrome_measurement import add_syndrome_measurement_6_ancilla_subcircuit
 from Codes.SteaneCode.correction import add_correction_subcircuit
 from Codes.SteaneCode.decoding import add_decoding_subcircuit
 
-from Common.utils import get_simulator_backend, get_counts_without_syndrome
+from Common.utils import get_counts_without_syndrome
 from Common.delay_subcircuits import add_delay_to_subcircuit
 
 from Common.utils import construct_circuit
 
 
-def run_code(backend, delay_ns: int = 0, artifical_error=False, shots=100_000):
+def run_code(backend, delay_ns: int = 0, artifical_certain_error = False, shots = 100_000, artifical_probabilistic_error_rate = 0):
 
     q_logical = QuantumRegister(7, 'logical')
     ancilla = QuantumRegister(6, 'ancilla')
@@ -30,8 +30,9 @@ def run_code(backend, delay_ns: int = 0, artifical_error=False, shots=100_000):
 
     construct_circuit(circuit, [
         lambda: add_encoding_subcircuit(circuit, q_logical),
-        (lambda: add_simple_error_subcircuit(circuit, q_logical, 4)) if artifical_error else None,
+        (lambda: add_simple_error_subcircuit(circuit, q_logical, 4)) if artifical_certain_error else None,
         (lambda: add_delay_to_subcircuit(circuit, q_logical, delay_ns)) if delay_ns > 0 else None,
+        (lambda: add_bit_phase_error_channel_subcircuit(circuit, q_logical, artifical_probabilistic_error_rate) if artifical_probabilistic_error_rate > 0 else None),
         lambda: add_syndrome_measurement_6_ancilla_subcircuit(circuit, q_logical, ancilla, x_syndrome, z_syndrome),
         lambda: add_correction_subcircuit(circuit, q_logical, x_syndrome, z_syndrome),
         lambda: add_decoding_subcircuit(circuit, q_logical)
@@ -46,8 +47,8 @@ def run_code(backend, delay_ns: int = 0, artifical_error=False, shots=100_000):
 
     print(dict(circuit.count_ops()))
 
-    circuit = transpile(circuit, backend, optimization_level=3)
-    job = execute(circuit, backend, shots=shots)
+    circuit = transpile(circuit, backend, optimization_level=0 if artifical_probabilistic_error_rate > 0 else 3)
+    job = execute(circuit, backend, shots=shots,)
 
     job_monitor(job)
 
@@ -56,6 +57,6 @@ def run_code(backend, delay_ns: int = 0, artifical_error=False, shots=100_000):
 
     print("\nSteane code 6 ancilla results:")
     print("----------------------------------------")
-    print("Delay = ", delay_ns, "ns")
+    print("Delay = ", delay_ns, "ns", "Artifical error rate = ", artifical_probabilistic_error_rate)
     print(counts)
     print(counts_without_syndrome)
