@@ -1,67 +1,50 @@
-print('\nBit flip code')
-print('--------------')
 
 from qiskit import QuantumRegister
 from qiskit import ClassicalRegister
 from qiskit import QuantumCircuit, execute,IBMQ
 from qiskit.tools.monitor import job_monitor
 from qiskit import transpile
-from Common.utils import get_simulator_backend
 from Common.delay_subcircuits import add_delay_to_subcircuit
+from Common.error_subcircuits import add_simple_error_subcircuit
 
-# local simulator
-#backend = Aer.get_backend("aer_simulator")
+def run_code(backend, delay_ns: int = 0, artifical_error = False, shots = 100_000):
 
-# IBM's latest calibration snapshot of real device simulator
-#from qiskit_aer import AerSimulator
-#with open("apitoken.txt", "r") as f:
-#    token = f.readline().strip()
-#IBMQ.enable_account(token)
-#provider = IBMQ.get_provider()
-#device = provider.get_backend('ibmq_manila')
-#backend = AerSimulator.from_backend(device)A
+    q = QuantumRegister(3,'|0>')
+    c = ClassicalRegister(1,'c')
 
-# IBM's old snapshots
-backend = get_simulator_backend()
+    circuit = QuantumCircuit(q,c)
 
-q = QuantumRegister(3,'|0>')
-c = ClassicalRegister(1,'c')
+    circuit.cx(q[0],q[1])
+    circuit.cx(q[0],q[2])
 
-circuit = QuantumCircuit(q,c)
+    circuit.barrier()
 
-circuit.cx(q[0],q[1])
-circuit.cx(q[0],q[2])
+    if(artifical_error):
+        add_simple_error_subcircuit(circuit, q, 0)
+    if(delay_ns > 0):
+        add_delay_to_subcircuit(circuit, q, delay_ns)
 
-circuit.barrier()
+    circuit.barrier()
 
-####error here############
-#circuit.x(q[0])#Bit flip error
-#circuit.z(q[0])#Phase flip error
-############################
+    circuit.cx(q[0],q[1])
+    circuit.cx(q[0],q[2])
 
-add_delay_to_subcircuit(circuit, q)
+    circuit.ccx(q[1],q[2],q[0])
 
-circuit.barrier()
+    circuit.measure(q[0],c[0])
 
-circuit.cx(q[0],q[1])
-circuit.cx(q[0],q[2])
+    circuit.draw(output='mpl', filename='Circuits/bit_flip_code_in_place.png') #Draws an image of the circuit
 
-circuit.ccx(q[1],q[2],q[0])
+    print(dict(circuit.count_ops()))
 
-circuit.measure(q[0],c[0])
+    circuit = transpile(circuit, backend, optimization_level=3)
+    job = execute(circuit, backend, shots=shots)
 
-circuit.draw(output='mpl', filename='../Circuits/bit_flip_code_in_place.png') #Draws an image of the circuit
+    job_monitor(job)
 
-print(dict(circuit.count_ops()))
+    counts = job.result().get_counts()
 
-circuit = transpile(circuit, backend, optimization_level=3)
-job = execute(circuit, backend, shots=100000)
-
-job_monitor(job)
-
-counts = job.result().get_counts()
-
-print("\nBit flip code with bit flip and phase error")
-print("----------------------------------------")
-print(counts)
-input("Press any key to continue ...")
+    print("\nBit flip code results:")
+    print("----------------------------------------")
+    print("Delay = ", delay_ns, "ns")
+    print(counts)

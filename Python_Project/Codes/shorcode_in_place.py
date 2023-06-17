@@ -1,5 +1,3 @@
-print('\nShor Code')
-print('--------------')
 
 from qiskit import QuantumRegister
 from qiskit import ClassicalRegister
@@ -7,119 +5,80 @@ from qiskit import QuantumCircuit, execute,IBMQ
 from qiskit.tools.monitor import job_monitor
 from qiskit import Aer
 from qiskit import transpile
-from Common.utils import get_simulator_backend
 from Common.delay_subcircuits import add_delay_to_subcircuit
+from Common.error_subcircuits import add_simple_error_subcircuit
 
-#IBMQ.enable_account(‘ENTER API KEY HERE')
-#provider = IBMQ.get_provider(hub='ibm-q')
+def run_code(backend, delay_ns: int = 0, artifical_error=False, shots=100_000):
 
-#backend = provider.get_backend('ibmq_qasm_simulator')
+    q = QuantumRegister(9,'q')
+    c = ClassicalRegister(1,'c')
 
-#backend = Aer.get_backend("aer_simulator")
-backend = get_simulator_backend()
+    circuit = QuantumCircuit(q,c)
 
-q = QuantumRegister(1,'q')
-c = ClassicalRegister(1,'c')
+    # encoding
 
-circuit = QuantumCircuit(q,c)
+    circuit.cx(q[0],q[3])
+    circuit.cx(q[0],q[6])
 
-circuit.h(q[0])
+    circuit.h(q[0])
+    circuit.h(q[3])
+    circuit.h(q[6])
 
-####error here############
-#circuit.x(q[0])#Bit flip error
-#circuit.z(q[0])#Phase flip error
-############################
+    circuit.cx(q[0],q[1])
+    circuit.cx(q[3],q[4])
+    circuit.cx(q[6],q[7])
 
-add_delay_to_subcircuit(circuit, q)
+    circuit.cx(q[0],q[2])
+    circuit.cx(q[3],q[5])
+    circuit.cx(q[6],q[8])
 
-circuit.h(q[0])
+    circuit.barrier(q)
 
-circuit.barrier(q)  #co to robi?
+    if(artifical_error):
+        add_simple_error_subcircuit(circuit, q, 0)
+    if(delay_ns > 0):
+        add_delay_to_subcircuit(circuit, q, delay_ns)
 
-circuit.measure(q[0],c[0])
+    circuit.barrier(q)
 
-job = execute(circuit, backend, shots=10000)
+    # decoding
 
-job_monitor(job)
+    circuit.cx(q[0],q[1])
+    circuit.cx(q[3],q[4])
+    circuit.cx(q[6],q[7])
 
-counts = job.result().get_counts()
+    circuit.cx(q[0],q[2])
+    circuit.cx(q[3],q[5])
+    circuit.cx(q[6],q[8])
 
-print("\n Uncorrected bit flip and phase error")
-print("--------------------------------------")
-print(counts)
+    circuit.ccx(q[1],q[2],q[0])
+    circuit.ccx(q[4],q[5],q[3])
+    circuit.ccx(q[8],q[7],q[6])
 
-#####Shor code starts here ########
-q = QuantumRegister(9,'q')
-c = ClassicalRegister(1,'c')
+    circuit.h(q[0])
+    circuit.h(q[3])
+    circuit.h(q[6])
 
-circuit = QuantumCircuit(q,c)
+    circuit.cx(q[0],q[3])
+    circuit.cx(q[0],q[6])
+    circuit.ccx(q[6],q[3],q[0])
 
-# encoding
+    circuit.barrier(q)
 
-circuit.cx(q[0],q[3])
-circuit.cx(q[0],q[6])
+    circuit.measure(q[0],c[0])
 
-circuit.h(q[0])
-circuit.h(q[3])
-circuit.h(q[6])
+    circuit.draw(output='mpl',filename='Circuits/shorcode_in_place.png') #Draws an image of the circuit
 
-circuit.cx(q[0],q[1])
-circuit.cx(q[3],q[4])
-circuit.cx(q[6],q[7])
+    print(dict(circuit.count_ops()))
 
-circuit.cx(q[0],q[2])
-circuit.cx(q[3],q[5])
-circuit.cx(q[6],q[8])
+    circuit = transpile(circuit, backend, optimization_level=3)
+    job = execute(circuit, backend, shots=shots)
 
-circuit.barrier(q)
+    job_monitor(job)
 
-####error here############
-#circuit.x(q[0])#Bit flip error
-#circuit.z(q[0])#Phase flip error
-############################
+    counts = job.result().get_counts()
 
-add_delay_to_subcircuit(circuit, q)
-
-circuit.barrier(q)
-
-# decoding
-
-circuit.cx(q[0],q[1])
-circuit.cx(q[3],q[4])
-circuit.cx(q[6],q[7])
-
-circuit.cx(q[0],q[2])
-circuit.cx(q[3],q[5])
-circuit.cx(q[6],q[8])
-
-circuit.ccx(q[1],q[2],q[0])
-circuit.ccx(q[4],q[5],q[3])
-circuit.ccx(q[8],q[7],q[6])
-
-circuit.h(q[0])
-circuit.h(q[3])
-circuit.h(q[6])
-
-circuit.cx(q[0],q[3])
-circuit.cx(q[0],q[6])
-circuit.ccx(q[6],q[3],q[0])
-
-circuit.barrier(q)
-
-circuit.measure(q[0],c[0])
-
-circuit.draw(output='mpl',filename='../Circuits/shorcode_in_place.png') #Draws an image of the circuit
-
-print(dict(circuit.count_ops()))
-
-circuit = transpile(circuit, backend, optimization_level=3)
-job = execute(circuit, backend, shots=10000)
-
-job_monitor(job)
-
-counts = job.result().get_counts()
-
-print("\nShor code with bit flip and phase error")
-print("----------------------------------------")
-print(counts)
-input()
+    print("\nShor code results:")
+    print("----------------------------------------")
+    print("Delay = ", delay_ns, "ns")
+    print(counts)

@@ -2,16 +2,23 @@
 from qiskit import QuantumCircuit
 
 def construct_circuit(circuit: QuantumCircuit, subcircuits_appending_functions: list) -> None:
-    subcircuits_appending_functions[0]()
+    if(subcircuits_appending_functions[0]):
+        subcircuits_appending_functions[0]()
     for f in subcircuits_appending_functions[1:]:
-        circuit.barrier()
-        f()
+        if(f):
+            circuit.barrier()
+            f()
 
-def get_simulator_backend():
+def get_real_device_simulator_backend():
     from qiskit.providers.fake_provider import FakeKolkataV2
     from qiskit_aer import AerSimulator
     fake_device = FakeKolkataV2()
     backend = AerSimulator.from_backend(fake_device)
+    return backend
+
+def get_perfect_gates_simulator_backend():
+    from qiskit import Aer
+    backend = Aer.get_backend("aer_simulator")
     return backend
 
 def get_counts_without_syndrome(counts):

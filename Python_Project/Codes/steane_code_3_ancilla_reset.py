@@ -1,8 +1,3 @@
-from Common.error_subcircuits import add_simple_error_subcircuit
-from Common.utils import construct_circuit
-
-print('\nSteane Code 3 ancilla')
-print('--------------')
 
 from qiskit import QuantumRegister
 from qiskit import ClassicalRegister
@@ -18,6 +13,8 @@ from Codes.SteaneCode.decoding import add_decoding_subcircuit
 
 from Common.utils import get_simulator_backend, get_counts_without_syndrome
 from Common.delay_subcircuits import add_delay_to_subcircuit
+from Common.error_subcircuits import add_simple_error_subcircuit
+from Common.utils import construct_circuit
 
 import matplotlib.pyplot as plt
 
@@ -29,53 +26,44 @@ import matplotlib.pyplot as plt
 # ========================================================
 
 
-#IBMQ.enable_account(‘ENTER API KEY HERE')
-#provider = IBMQ.get_provider(hub='ibm-q')
+def run_code(backend, delay_ns: int = 0, artifical_error=False, shots=100_000):
 
-#backend = provider.get_backend('ibmq_qasm_simulator')
+    q_logical = QuantumRegister(7, 'logical')
+    ancilla = QuantumRegister(3, 'ancilla')
+    x_syndrome = ClassicalRegister(3, 'x_syndrome')
+    z_syndrome = ClassicalRegister(3, 'z_syndrome')
+    fin_m = ClassicalRegister(1,'final_measurement') #1 for final measurement after decoding, 6 ancilla for decoding (syndrome measurement)
 
-#backend = Aer.get_backend("aer_simulator")
-backend = get_simulator_backend()
+    circuit = QuantumCircuit(q_logical, ancilla, x_syndrome, z_syndrome, fin_m)
 
-#####Steane code starts here ########
+    construct_circuit(circuit, [
+        lambda: add_encoding_subcircuit(circuit, q_logical),
+        (lambda: add_simple_error_subcircuit(circuit, q_logical, 4)) if artifical_error else None,
+        (lambda: add_delay_to_subcircuit(circuit, q_logical, delay_ns)) if delay_ns > 0 else None,
+        lambda: add_syndrome_measurement_3_ancilla_reset_subcircuit(circuit, q_logical, ancilla, x_syndrome, z_syndrome),
+        lambda: add_correction_subcircuit(circuit, q_logical, x_syndrome, z_syndrome),
+        lambda: add_decoding_subcircuit(circuit, q_logical)
+        ])
 
-#q_logical[0] is the state to encode
+    #here final measurement
 
-q_logical = QuantumRegister(7, 'logical')
-ancilla = QuantumRegister(3, 'ancilla')
-x_syndrome = ClassicalRegister(3, 'x_syndrome')
-z_syndrome = ClassicalRegister(3, 'z_syndrome')
-fin_m = ClassicalRegister(1,'final_measurement') #1 for final measurement after decoding, 6 ancilla for decoding (syndrome measurement)
+    circuit.barrier()
+    circuit.measure(q_logical[0], fin_m)
 
-circuit = QuantumCircuit(q_logical, ancilla, x_syndrome, z_syndrome, fin_m)
+    circuit.draw(output='mpl', filename='Circuits/steane_code_3_ancilla_reset.png') #Draws an image of the circuit
 
-construct_circuit(circuit, [
-    lambda: add_encoding_subcircuit(circuit, q_logical),
-    #lambda: add_simple_error_subcircuit(circuit, q_logical, 0),
-    lambda: add_delay_to_subcircuit(circuit, q_logical),
-    lambda: add_syndrome_measurement_3_ancilla_reset_subcircuit(circuit, q_logical, ancilla, x_syndrome, z_syndrome),
-    lambda: add_correction_subcircuit(circuit, q_logical, x_syndrome, z_syndrome),
-    lambda: add_decoding_subcircuit(circuit, q_logical)
-    ])
+    print(dict(circuit.count_ops()))
 
-#here final measurement
+    circuit = transpile(circuit, backend, optimization_level=3)
+    job = execute(circuit, backend, shots=shots)
 
-circuit.barrier()
-circuit.measure(q_logical[0], fin_m)
+    job_monitor(job)
 
-circuit.draw(output='mpl', filename='../Circuits/steane_code_3_ancilla_reset.png') #Draws an image of the circuit
+    counts = job.result().get_counts()
+    counts_without_syndrome = get_counts_without_syndrome(counts)
 
-print(dict(circuit.count_ops()))
-
-circuit = transpile(circuit, backend, optimization_level=3)
-job = execute(circuit, backend, shots=100000)
-
-job_monitor(job)
-
-counts = job.result().get_counts()
-counts_without_syndrome = get_counts_without_syndrome(counts)
-
-print("\nSteane code with bit flip and phase error")
-print("----------------------------------------")
-print(counts)
-print(counts_without_syndrome)
+    print("\nSteane code 3 ancilla results:")
+    print("----------------------------------------")
+    print("Delay = ", delay_ns, "ns")
+    print(counts)
+    print(counts_without_syndrome)
