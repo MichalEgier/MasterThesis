@@ -12,6 +12,7 @@ from qiskit import QuantumCircuit, execute,IBMQ
 from qiskit.tools.monitor import job_monitor
 from qiskit import transpile
 from Common.utils import get_counts_without_syndrome
+from Common.utils import count_fidelity
 
 
 import matplotlib.pyplot as plt
@@ -24,7 +25,7 @@ import matplotlib.pyplot as plt
 # ========================================================
 
 
-def run_code(backend, delay_ns: int = 0, artifical_certain_error = False, shots = 100_000, artifical_probabilistic_error_rate = 0):
+def run_code(backend, delay_ns: int = 0, artifical_certain_error = False, shots = 100_000, artifical_probabilistic_error_rate = 0, initial_state = None, hadamard_basis = False, referential_0_state_measured_ratio=None):
 
     q_logical = QuantumRegister(5, '|0>')
     ancilla = QuantumRegister(4, '|0> = ancilla')
@@ -32,6 +33,9 @@ def run_code(backend, delay_ns: int = 0, artifical_certain_error = False, shots 
     fin_m = ClassicalRegister(1,'final_measurement')
 
     circuit = QuantumCircuit(q_logical, ancilla, syndrome, fin_m)
+
+    if(initial_state):
+        circuit.initialize(initial_state, 0)
 
     construct_circuit(circuit, [
         lambda: add_encoding_subcircuit(circuit, q_logical),
@@ -46,6 +50,9 @@ def run_code(backend, delay_ns: int = 0, artifical_certain_error = False, shots 
     #here final measurement
 
     circuit.barrier()
+
+    if(hadamard_basis):
+        circuit.h(0)
     circuit.measure(q_logical[0], fin_m)
 
     circuit.draw(output='mpl', filename='Circuits/5_qubits_code.png') #Draws an image of the circuit
@@ -63,6 +70,8 @@ def run_code(backend, delay_ns: int = 0, artifical_certain_error = False, shots 
 
     print("\n5-qubit code results:")
     print("----------------------------------------")
-    print("Delay = ", delay_ns, "ns", "Artifical error rate = ", artifical_probabilistic_error_rate)
+    print("Delay = ", delay_ns, "ns", "Artifical error rate = ", artifical_probabilistic_error_rate, "hadamard_basis", hadamard_basis, "initial_state=", initial_state)
+    if(referential_0_state_measured_ratio):
+        print("Fidelity = ", count_fidelity(counts_without_syndrome, referential_0_state_measured_ratio))
     print(counts)
     print(counts_without_syndrome)

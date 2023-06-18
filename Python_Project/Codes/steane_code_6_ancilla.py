@@ -16,9 +16,10 @@ from Common.utils import get_counts_without_syndrome
 from Common.delay_subcircuits import add_delay_to_subcircuit
 
 from Common.utils import construct_circuit
+from Common.utils import count_fidelity
 
 
-def run_code(backend, delay_ns: int = 0, artifical_certain_error = False, shots = 100_000, artifical_probabilistic_error_rate = 0):
+def run_code(backend, delay_ns: int = 0, artifical_certain_error = False, shots = 100_000, artifical_probabilistic_error_rate = 0, initial_state = None, hadamard_basis = False, referential_0_state_measured_ratio=None):
 
     q_logical = QuantumRegister(7, 'logical')
     ancilla = QuantumRegister(6, 'ancilla')
@@ -27,6 +28,9 @@ def run_code(backend, delay_ns: int = 0, artifical_certain_error = False, shots 
     fin_m = ClassicalRegister(1,'final_measurement') #1 for final measurement after decoding, 6 ancilla for decoding (syndrome measurement)
 
     circuit = QuantumCircuit(q_logical, ancilla, x_syndrome, z_syndrome, fin_m)
+
+    if(initial_state):
+        circuit.initialize(initial_state, 0)
 
     construct_circuit(circuit, [
         lambda: add_encoding_subcircuit(circuit, q_logical),
@@ -41,6 +45,8 @@ def run_code(backend, delay_ns: int = 0, artifical_certain_error = False, shots 
     #here final measurement
 
     circuit.barrier()
+    if(hadamard_basis):
+        circuit.h(0)
     circuit.measure(q_logical[0], fin_m)
 
     circuit.draw(output='mpl', filename='Circuits/steane_code_6_ancilla.png') #Draws an image of the circuit
@@ -57,6 +63,8 @@ def run_code(backend, delay_ns: int = 0, artifical_certain_error = False, shots 
 
     print("\nSteane code 6 ancilla results:")
     print("----------------------------------------")
-    print("Delay = ", delay_ns, "ns", "Artifical error rate = ", artifical_probabilistic_error_rate)
+    print("Delay = ", delay_ns, "ns", "Artifical error rate = ", artifical_probabilistic_error_rate, "hadamard_basis", hadamard_basis, "initial_state=", initial_state)
+    if(referential_0_state_measured_ratio):
+        print("Fidelity = ", count_fidelity(counts_without_syndrome, referential_0_state_measured_ratio))
     print(counts)
     print(counts_without_syndrome)

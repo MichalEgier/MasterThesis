@@ -1,6 +1,7 @@
 
 from qiskit import QuantumCircuit
 from qiskit_aer.noise import pauli_error, NoiseModel
+import math
 
 def construct_circuit(circuit: QuantumCircuit, subcircuits_appending_functions: list) -> None:
     if(subcircuits_appending_functions[0]):
@@ -22,6 +23,7 @@ def get_perfect_gates_simulator_backend():
     backend = Aer.get_backend("aer_simulator")
     return backend
 
+#to delete
 def get_identity_noise_model(error_rate):
     bit_flip = pauli_error([('X', error_rate), ('I', 1 - error_rate)])
     phase_flip = pauli_error([('Z', error_rate), ('I', 1 - error_rate)])
@@ -35,6 +37,10 @@ def get_identity_noise_model(error_rate):
 def get_counts_without_syndrome(counts):
     counts_without_syndrome = {}
     from itertools import groupby
-    for k, v in groupby(sorted(counts.items()), key=lambda i: 1 if i[0][0] == "1" else 0):
+    for k, v in groupby(sorted(counts.items()), key=lambda i: '1' if i[0][0] == "1" else '0'):
         counts_without_syndrome[k] = sum(item[1] for item in list(v))
     return counts_without_syndrome
+
+def count_fidelity(counts: dict, referential_0_state_measurement_ratio: float):
+    measured_0_state_ratio = counts['0'] / (counts['0'] + counts['1'])
+    return 1 - math.fabs(referential_0_state_measurement_ratio - measured_0_state_ratio)

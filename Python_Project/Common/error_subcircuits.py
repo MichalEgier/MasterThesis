@@ -14,7 +14,7 @@ def add_identity_gates_subcircuit(circuit: QuantumCircuit, logical: QuantumRegis
 def add_bit_phase_error_channel_subcircuit(circuit: QuantumCircuit, logical: QuantumRegister, p: float):
     '''Implementation with Kraus-operators representation'''
 
-    #p = p/2 # due to fact that has been applied twice in this implementation
+    p = 1 - p # in the OSR below, p is represented as probability of preserving the state intact, while in function argument it is probability of reversing the state
 
     # x channel
     K0 = np.array([[np.sqrt(p), 0], [0, np.sqrt(p)]])
@@ -33,8 +33,3 @@ def add_bit_phase_error_channel_subcircuit(circuit: QuantumCircuit, logical: Qua
 
     for x in range(logical.size):
         circuit.append(total_channel.to_instruction(), [x])
-
-    circuit.h(logical)
-    for x in range(logical.size):
-        circuit.append(total_channel.to_instruction(), [x])
-    circuit.h(logical)
